@@ -18,6 +18,7 @@ import { ToolGatewayHttpError, type ToolGatewayService } from "../services/tool-
 import { forbidden, HttpError } from "../errors.js";
 import { accessService } from "../services/index.js";
 import { listConnectionLifecycleEvents } from "../services/tool-connection-activity.js";
+import { toMcpToolCallResult } from "./tool-gateway-result.js";
 
 const TOOL_ACTIVITY_EVENT_TYPES = [
   "call_completed",
@@ -190,21 +191,7 @@ async function handleMcpGatewayProtocol(
         parameters: params.arguments ?? {},
         callerHeaders: req.headers,
       }));
-      const resultRecord = result.result && typeof result.result === "object" && !Array.isArray(result.result)
-        ? result.result as Record<string, unknown>
-        : null;
-      const contentText = typeof resultRecord?.content === "string"
-        ? resultRecord.content
-        : JSON.stringify(resultRecord?.data ?? result.result ?? null);
-      res.json({
-        jsonrpc: "2.0",
-        id,
-        result: {
-          content: [{ type: "text", text: contentText }],
-          structuredContent: resultRecord?.data ?? null,
-          isError: false,
-        },
-      });
+      res.json({ jsonrpc: "2.0", id, result: toMcpToolCallResult(result.result) });
       return;
     }
     if (["resources/list", "resources/read", "prompts/list", "prompts/get"].includes(body.method ?? "")) {
